@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, AlertCircle } from 'lucide-react';
-// 1. On importe le composant de la modale
+import { Plus, Search, Filter, Edit, Trash2, AlertCircle, X } from 'lucide-react';
 import AddProductModal from '../components/AddProductModal';
 
 export default function Produits() {
   const [produits, setProduits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // 2. État pour gérer l'ouverture/fermeture de la modale
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 3. On extrait la logique de fetch dans une fonction réutilisable
+  // --- NOUVEL ÉTAT POUR LA MODALE DE SUPPRESSION ---
+  const [deleteConfig, setDeleteConfig] = useState({ 
+    isOpen: false, 
+    productId: null, 
+    productName: '' 
+  });
+
   const fetchProduits = () => {
     setLoading(true);
     fetch('http://localhost:8000/api/produits')
@@ -33,6 +36,32 @@ export default function Produits() {
     fetchProduits();
   }, []);
 
+  // --- LOGIQUE DE SUPPRESSION ---
+  const openDeleteModal = (id, nom) => {
+    setDeleteConfig({ isOpen: true, productId: id, productName: nom });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteConfig({ isOpen: false, productId: null, productName: '' });
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/produits/${deleteConfig.productId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setProduits(produits.filter(p => p.id !== deleteConfig.productId));
+        closeDeleteModal();
+      } else {
+        alert("Erreur lors de la suppression.");
+      }
+    } catch (err) {
+      console.error("Erreur réseau :", err);
+    }
+  };
+
   const getStockBadge = (stock, seuil) => {
     if (stock === 0) return <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold uppercase">Rupture</span>;
     if (stock <= seuil) return <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase">Stock Faible</span>;
@@ -50,8 +79,6 @@ export default function Produits() {
           <h1 className="text-3xl font-bold text-gray-800">Gestion des Produits</h1>
           <p className="text-gray-500">Données en direct de la base Pharmasol.</p>
         </div>
-        
-        {/* 4. On déclenche l'ouverture de la modale au clic */}
         <button 
           onClick={() => setIsModalOpen(true)}
           className="flex items-center justify-center gap-2 bg-[#76b09c] hover:bg-[#5e8d7d] text-white px-5 py-3 rounded-xl font-semibold transition-all shadow-lg active:scale-95"
@@ -98,9 +125,7 @@ export default function Produits() {
                     <div className="font-bold text-gray-800">{p.nom}</div>
                     <div className="text-xs text-gray-400 font-mono">{p.code_barre || `ID: #${p.id}`}</div>
                   </td>
-                  <td className="p-4 text-gray-600 text-sm">
-                    {p.categorie?.nom || 'Non classé'}
-                  </td>
+                  <td className="p-4 text-gray-600 text-sm">{p.categorie?.nom || 'Non classé'}</td>
                   <td className="p-4 font-medium">{parseFloat(p.prix).toFixed(2)} €</td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
@@ -114,7 +139,12 @@ export default function Produits() {
                   <td className="p-4 text-center">
                     <div className="flex justify-center gap-2">
                       <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={18} /></button>
-                      <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                      <button 
+                        onClick={() => openDeleteModal(p.id, p.nom)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -124,7 +154,37 @@ export default function Produits() {
         </div>
       </div>
 
-      {/* 5. On ajoute le composant Modale ici */}
+      {/* --- MODALE DE SUPPRESSION DESIGN --- */}
+      {deleteConfig.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Supprimer le produit ?</h3>
+              <p className="text-sm text-gray-500 mt-2">
+                Êtes-vous sûr de vouloir supprimer <span className="font-semibold text-gray-800">{deleteConfig.productName}</span> ? Cette action est irréversible.
+              </p>
+            </div>
+            <div className="bg-gray-50 px-6 py-4 flex flex-col gap-2">
+              <button
+                onClick={handleConfirmDelete}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
+              >
+                Confirmer la suppression
+              </button>
+              <button
+                onClick={closeDeleteModal}
+                className="w-full bg-white text-gray-600 border border-gray-200 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AddProductModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 

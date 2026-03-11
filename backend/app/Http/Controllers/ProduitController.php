@@ -59,9 +59,19 @@ class ProduitController extends Controller
     /**
      * DELETE /api/produits/{id} : Supprimer un produit
      */
-    public function destroy(Produit $produit)
-    {
+   public function destroy(Produit $produit)
+{
+    try {
         $produit->delete();
-        return response()->json(['message' => 'Produit supprimé avec succès']);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Produit supprimé avec succès'
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Erreur lors de la suppression'
+        ], 500);
     }
+}
 }
