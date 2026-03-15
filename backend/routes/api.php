@@ -5,10 +5,12 @@ use App\Http\Controllers\ProduitController;
 use App\Http\Controllers\CategorieController; 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\MouvementStockController;
 
 // --- ROUTES PUBLIQUES ---
 // On ajoute ->name('login') pour éviter l'erreur Route [login] not defined
 Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
+Route::post('/mouvements', [MouvementStockController::class, 'store']);
 
 // --- ROUTES PROTÉGÉES ---
 Route::middleware('auth:sanctum')->group(function () {
