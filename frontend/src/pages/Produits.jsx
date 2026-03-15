@@ -8,18 +8,31 @@ export default function Produits() {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- NOUVEL ÉTAT POUR LA MODALE DE SUPPRESSION ---
+  // --- RÉCUPÉRATION DE L'UTILISATEUR CONNECTÉ ---
+  const user = JSON.parse(localStorage.getItem('user'));
+
+  // --- ÉTAT POUR LA MODALE DE SUPPRESSION ---
   const [deleteConfig, setDeleteConfig] = useState({ 
     isOpen: false, 
     productId: null, 
     productName: '' 
   });
 
+  // --- RÉCUPÉRATION DES PRODUITS AVEC AUTH ---
   const fetchProduits = () => {
     setLoading(true);
-    fetch('http://localhost:8000/api/produits')
+    const token = localStorage.getItem('token');
+
+    fetch('http://localhost:8000/api/produits', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then((res) => {
-        if (!res.ok) throw new Error('Erreur réseau');
+        if (res.status === 401) throw new Error('Session expirée. Veuillez vous reconnecter.');
+        if (!res.ok) throw new Error('Erreur réseau lors du chargement');
         return res.json();
       })
       .then((data) => {
@@ -36,7 +49,7 @@ export default function Produits() {
     fetchProduits();
   }, []);
 
-  // --- LOGIQUE DE SUPPRESSION ---
+  // --- LOGIQUE DE SUPPRESSION AVEC AUTH ---
   const openDeleteModal = (id, nom) => {
     setDeleteConfig({ isOpen: true, productId: id, productName: nom });
   };
@@ -46,14 +59,22 @@ export default function Produits() {
   };
 
   const handleConfirmDelete = async () => {
+    const token = localStorage.getItem('token');
+
     try {
       const response = await fetch(`http://localhost:8000/api/produits/${deleteConfig.productId}`, {
         method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (response.ok) {
         setProduits(produits.filter(p => p.id !== deleteConfig.productId));
         closeDeleteModal();
+      } else if (response.status === 403) {
+        alert("Accès refusé : Seul un administrateur peut supprimer un produit.");
       } else {
         alert("Erreur lors de la suppression.");
       }
@@ -69,23 +90,32 @@ export default function Produits() {
   };
 
   if (loading && produits.length === 0) return <div className="p-10 text-center font-medium text-gray-500">Connexion à l'inventaire...</div>;
-  if (error) return <div className="p-10 text-center text-red-500">Erreur : {error}</div>;
+  if (error) return (
+    <div className="p-10 text-center">
+        <div className="text-red-500 mb-4 font-bold">Erreur : {error}</div>
+        <button onClick={fetchProduits} className="text-[#76b09c] underline">Réessayer</button>
+    </div>
+  );
 
   return (
-    <div className="space-y-6 animate-fade-in relative">
+    <div className="space-y-6 animate-fade-in relative p-4 md:p-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Gestion des Produits</h1>
-          <p className="text-gray-500">Données en direct de la base Pharmasol.</p>
+          <p className="text-gray-500">Connecté en tant que : <span className="font-semibold text-[#76b09c]">{user?.name} ({user?.role})</span></p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-[#76b09c] hover:bg-[#5e8d7d] text-white px-5 py-3 rounded-xl font-semibold transition-all shadow-lg active:scale-95"
-        >
-          <Plus size={20} />
-          <span>Nouveau Produit</span>
-        </button>
+
+        {/* CONDITION : Seul l'ADMIN peut voir le bouton "Nouveau Produit" */}
+        {user?.role === 'ADMIN' && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-[#76b09c] hover:bg-[#5e8d7d] text-white px-5 py-3 rounded-xl font-semibold transition-all shadow-lg active:scale-95"
+          >
+            <Plus size={20} />
+            <span>Nouveau Produit</span>
+          </button>
+        )}
       </div>
 
       {/* Recherche & Filtres */}
@@ -126,7 +156,7 @@ export default function Produits() {
                     <div className="text-xs text-gray-400 font-mono">{p.code_barre || `ID: #${p.id}`}</div>
                   </td>
                   <td className="p-4 text-gray-600 text-sm">{p.categorie?.nom || 'Non classé'}</td>
-                  <td className="p-4 font-medium">{parseFloat(p.prix).toFixed(2)} €</td>
+                  <td className="p-4 font-medium">{p.prix ? parseFloat(p.prix).toFixed(2) : '0.00'} €</td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <span className={`font-bold ${p.quantite_totale <= p.seuil_alerte ? 'text-amber-600' : 'text-gray-700'}`}>
@@ -138,13 +168,18 @@ export default function Produits() {
                   <td className="p-4">{getStockBadge(p.quantite_totale, p.seuil_alerte)}</td>
                   <td className="p-4 text-center">
                     <div className="flex justify-center gap-2">
+                      {/* Si c'est un employé, on peut masquer ou désactiver l'édition également */}
                       <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={18} /></button>
-                      <button 
-                        onClick={() => openDeleteModal(p.id, p.nom)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      
+                      {/* CONDITION : Seul l'ADMIN peut voir le bouton supprimer */}
+                      {user?.role === 'ADMIN' && (
+                        <button 
+                          onClick={() => openDeleteModal(p.id, p.nom)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -185,6 +220,7 @@ export default function Produits() {
         </div>
       )}
 
+      {/* La modale d'ajout ne s'ouvre que si isModalOpen est true */}
       <AddProductModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 

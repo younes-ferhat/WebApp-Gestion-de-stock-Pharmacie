@@ -1,30 +1,32 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-// On importe ton contrôleur
 use App\Http\Controllers\ProduitController;
 use App\Http\Controllers\CategorieController; 
 use App\Http\Controllers\Api\AuthController;
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
+use App\Http\Controllers\Api\UserController;
 
-// La route pour l'utilisateur (on la laisse, ça ne mange pas de pain)
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// --- ROUTES PUBLIQUES ---
+// On ajoute ->name('login') pour éviter l'erreur Route [login] not defined
+Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
 
-// LA ROUTE MAGIQUE POUR TES PRODUITS
-// Elle crée automatiquement GET /api/produits, POST, etc.
-Route::apiResource('produits', ProduitController::class);
-Route::apiResource('categories', CategorieController::class);
-
-Route::post('/auth/login', [AuthController::class, 'login']);
-
+// --- ROUTES PROTÉGÉES ---
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+
+    // Produits & Catégories (Automatiquement protégés par Sanctum)
+    Route::apiResource('categories', CategorieController::class);
+    Route::apiResource('produits', ProduitController::class);
+    Route::middleware('auth:sanctum')->group(function () {
+    // ... tes routes produits ...
+
+    // Nouvelles routes pour les utilisateurs
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+});
+    
+    // Exemple de protection par rôle (Issue ADMIN)
+    // Route::delete('/produits/{id}', [ProduitController::class, 'destroy'])->middleware('role:ADMIN');
 });

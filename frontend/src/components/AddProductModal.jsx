@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 export default function AddProductModal({ isOpen, onClose, onRefresh }) {
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState([]); // Initialisé comme tableau vide
   const [formData, setFormData] = useState({
     nom: '',
     prix: '',
@@ -12,28 +12,54 @@ export default function AddProductModal({ isOpen, onClose, onRefresh }) {
     code_barre: ''
   });
 
-  // Charger les catégories pour le menu déroulant
+  // --- CHARGEMENT SÉCURISÉ DES CATÉGORIES ---
   useEffect(() => {
     if (isOpen) {
-      fetch('http://localhost:8000/api/categories')
+      const token = localStorage.getItem('token');
+      
+      fetch('http://localhost:8000/api/categories', {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}` // Ajout du token
+        }
+      })
         .then(res => res.json())
-        .then(data => setCategories(data));
+        .then(data => {
+          // On vérifie que data est bien un tableau avant de mettre à jour
+          if (Array.isArray(data)) {
+            setCategories(data);
+          } else {
+            console.error("Les données reçues ne sont pas un tableau :", data);
+            setCategories([]); 
+          }
+        })
+        .catch(err => console.error("Erreur catégories:", err));
     }
   }, [isOpen]);
 
+  // --- ENVOI SÉCURISÉ DU PRODUIT ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem('token');
+
     try {
       const response = await fetch('http://localhost:8000/api/produits', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}` // Ajout du token
+        },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        onRefresh(); // Recharger la liste des produits
-        onClose();   // Fermer la modale
+        onRefresh();
+        onClose();
         setFormData({ nom: '', prix: '', quantite_totale: '', seuil_alerte: 10, categorie_id: '', code_barre: '' });
+      } else {
+        const errorData = await response.json();
+        alert("Erreur : " + (errorData.message || "Impossible d'ajouter le produit"));
       }
     } catch (error) {
       console.error("Erreur lors de l'ajout :", error);
@@ -55,33 +81,36 @@ export default function AddProductModal({ isOpen, onClose, onRefresh }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nom du produit</label>
-            <input required type="text" className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-pharmagreen outline-none" 
+            <input required type="text" className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-[#76b09c]" 
               onChange={(e) => setFormData({...formData, nom: e.target.value})} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Prix (€)</label>
-              <input required type="number" step="0.01" className="w-full p-3 border rounded-xl"
+              <input required type="number" step="0.01" className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-[#76b09c]"
                 onChange={(e) => setFormData({...formData, prix: e.target.value})} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Quantité initiale</label>
-              <input required type="number" className="w-full p-3 border rounded-xl"
+              <input required type="number" className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-[#76b09c]"
                 onChange={(e) => setFormData({...formData, quantite_totale: e.target.value})} />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-            <select required className="w-full p-3 border rounded-xl bg-white"
+            <select required className="w-full p-3 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-[#76b09c]"
               onChange={(e) => setFormData({...formData, categorie_id: e.target.value})}>
               <option value="">Choisir une catégorie</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+              {/* Le ?.map évite le crash si categories n'est pas encore chargé */}
+              {Array.isArray(categories) && categories.map(c => (
+                <option key={c.id} value={c.id}>{c.nom}</option>
+              ))}
             </select>
           </div>
 
-          <button type="submit" className="w-full bg-[#76b09c] text-white py-4 rounded-2xl font-bold hover:bg-[#5e8d7d] transition-all shadow-lg shadow-emerald-100 mt-4">
+          <button type="submit" className="w-full bg-[#76b09c] text-white py-4 rounded-2xl font-bold hover:bg-[#5e8d7d] transition-all shadow-lg mt-4">
             Enregistrer le produit
           </button>
         </form>

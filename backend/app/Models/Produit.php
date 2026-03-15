@@ -15,7 +15,7 @@ class Produit extends Model
 
     // --- RELATIONS "BELONGS TO" (Le produit appartient à...) ---
 
-    public function categorie(): BelongsTo
+   public function categorie()
     {
         return $this->belongsTo(Categorie::class);
     }

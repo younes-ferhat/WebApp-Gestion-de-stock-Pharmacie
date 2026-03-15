@@ -1,5 +1,3 @@
-// frontend/src/services/authService.js
-
 const API_URL = 'http://localhost:8000/api';
 
 const authService = {
@@ -8,17 +6,24 @@ const authService = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json', // Force Laravel à ne pas rediriger
       },
       body: JSON.stringify({ email, password }),
     });
 
     if (!response.ok) {
-      throw new Error('Erreur de connexion');
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Email ou mot de passe incorrect');
     }
 
     const data = await response.json();
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    
+    // Stockage persistant
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+
     return data;
   },
 
@@ -28,6 +33,7 @@ const authService = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
       },
     });
 
@@ -40,6 +46,7 @@ const authService = {
     const response = await fetch(`${API_URL}/auth/me`, {
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
       },
     });
 
