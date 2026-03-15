@@ -6,15 +6,16 @@ use App\Models\User;
 use App\Models\Categorie;
 use App\Models\Produit;
 use Illuminate\Database\Seeder;
+use App\Models\Lot;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // 1. Créer les Catégories
-        $analgesique = Categorie::create(['nom' => 'Analgésiques', 'description' => 'Contre la douleur']);
-        $antibio = Categorie::create(['nom' => 'Antibiotiques', 'description' => 'Contre les infections']);
-        $sirop = Categorie::create(['nom' => 'Sirops', 'description' => 'Voies respiratoires']);
+        $analgesique = Categorie::create(['nom' => 'Analgésiques']);
+        $antibio = Categorie::create(['nom' => 'Antibiotiques']);
+        $sirop = Categorie::create(['nom' => 'Sirops']);
 
         // 2. Créer quelques Produits
         Produit::create([
@@ -56,5 +57,19 @@ class DatabaseSeeder extends Seeder
             'code_barre' => '3400930103440',
             'categorie_id' => $sirop->id,
         ]);
+
+        Lot::create([
+    'numero_lot' => 'LOT-2026-DOLI',
+    'date_peremption' => '2026-12-31',
+    'quantite' => 150,
+    'produit_id' => 1, // ID du Doliprane
+]);
+
+    Lot::create([
+    'numero_lot' => 'LOT-2026-AMOX',
+    'date_peremption' => '2026-03-20', // Date proche pour tester l'alerte SF3
+    'quantite' => 8,
+    'produit_id' => 2, // ID de l'Amoxicilline
+]);
     }
 }

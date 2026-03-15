@@ -3,9 +3,10 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 // On importe ton contrôleur
-use App\Http\Controllers\ProduitController;
+use App\Http\Controllers\Api\ProduitController;
 use App\Http\Controllers\CategorieController; 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\LotController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -20,6 +21,7 @@ Route::get('/user', function (Request $request) {
 // LA ROUTE MAGIQUE POUR TES PRODUITS
 // Elle crée automatiquement GET /api/produits, POST, etc.
 Route::apiResource('produits', ProduitController::class);
+Route::apiResource('lots', LotController::class);
 Route::apiResource('categories', CategorieController::class);
 
 Route::post('/auth/login', [AuthController::class, 'login']);
