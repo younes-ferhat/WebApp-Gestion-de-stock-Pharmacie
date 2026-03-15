@@ -21,7 +21,7 @@ return new class extends Migration
         // Clé étrangère vers Produit
         $table->foreignId('produit_id')->constrained('produits')->onDelete('cascade');
         // Clé étrangère vers l'utilisateur (Employé/Admin)
-        $table->foreignId('utilisateur_id')->nullable()->constrained('users')->onDelete('cascade');
+        $table->foreignId('utilisateur_id')->constrained('users');
         
         $table->timestamps();
     });
