@@ -5,6 +5,8 @@ use App\Http\Controllers\ProduitController;
 use App\Http\Controllers\CategorieController; 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\MouvementStockController;
+use App\Http\Controllers\Api\AlerteController;
 
 use function Symfony\Component\String\u;
 
@@ -14,6 +16,9 @@ use App\Http\Controllers\Api\FournisseurController;
 // --- ROUTES PUBLIQUES ---
 // On ajoute ->name('login') pour éviter l'erreur Route [login] not defined
 Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
+Route::post('/mouvements', [MouvementStockController::class, 'store']);
+Route::get('alertes', [AlerteController::class, 'index']);
+
 
 // --- ROUTES PROTÉGÉES ---
 Route::middleware('auth:sanctum')->group(function () {
