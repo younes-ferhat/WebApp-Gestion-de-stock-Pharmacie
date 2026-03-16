@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use App\Models\Categorie;
 use App\Models\Produit;
+use App\Models\Lot;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -12,7 +13,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Utilisateur
+        // 1. UTILISATEURS
         User::updateOrCreate(
             ['email' => 'admin@pharmacie.local'],
             [
@@ -21,15 +22,17 @@ class DatabaseSeeder extends Seeder
                 'role' => 'ADMIN'
             ]
         );
+
         User::updateOrCreate(
-        ['email' => 'employe1@pharmacie.local'], // <--- L'email de ton image
-        [
-            'name' => 'Vendeur Pharmacie',
-            'password' => Hash::make('password123'),
-            'role' => 'EMPLOYE' // Son rôle par défaut
-        ]
-    );
-        // 2. Catégories (On utilise updateOrCreate pour éviter les erreurs de doublons)
+            ['email' => 'employe1@pharmacie.local'],
+            [
+                'name' => 'Vendeur Pharmacie',
+                'password' => Hash::make('password123'),
+                'role' => 'EMPLOYE'
+            ]
+        );
+
+        // 2. CATÉGORIES (On stocke dans des variables)
         $analgesique = Categorie::updateOrCreate(['nom' => 'Analgésiques'], ['description' => 'Contre la douleur']);
         $antibio     = Categorie::updateOrCreate(['nom' => 'Antibiotiques'], ['description' => 'Contre les infections']);
         $sirop       = Categorie::updateOrCreate(['nom' => 'Sirops'], ['description' => 'Voies respiratoires']);
@@ -37,8 +40,8 @@ class DatabaseSeeder extends Seeder
         Categorie::updateOrCreate(['nom' => 'Vitamines']);
         Categorie::updateOrCreate(['nom' => 'Matériel Médical']);
 
-        // 3. Produits (On utilise updateOrCreate sur le nom ou le code barre)
-        Produit::updateOrCreate(
+        // 3. PRODUITS (On stocke les objets retournés dans des variables)
+        $doliprane = Produit::updateOrCreate(
             ['nom' => 'Doliprane 1000mg'],
             [
                 'description' => 'Paracétamol boîte de 8',
@@ -50,7 +53,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        Produit::updateOrCreate(
+        $amoxicilline = Produit::updateOrCreate(
             ['nom' => 'Amoxicilline 500mg'],
             [
                 'description' => 'Sandoz - 12 gélules',
@@ -62,7 +65,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        Produit::updateOrCreate(
+        $maxilase = Produit::updateOrCreate(
             ['nom' => 'Maxilase Sirop'],
             [
                 'description' => 'Flacon de 200ml',
@@ -74,6 +77,25 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $this->command->info('Base de données initialisée avec succès (Utilisateurs, Catégories et Produits) !');
+        // 4. LOTS (Liaison dynamique via les IDs des variables ci-dessus)
+        Lot::updateOrCreate(
+            ['numero_lot' => 'LOT-2026-DOLI'],
+            [
+                'date_peremption' => '2026-12-31',
+                'quantite' => 150,
+                'produit_id' => $doliprane->id, // Liaison automatique
+            ]
+        );
+
+        Lot::updateOrCreate(
+            ['numero_lot' => 'LOT-2026-AMOX'],
+            [
+                'date_peremption' => '2026-03-20',
+                'quantite' => 8,
+                'produit_id' => $amoxicilline->id, // Liaison automatique
+            ]
+        );
+
+        $this->command->info('Base de données initialisée dynamiquement avec succès !');
     }
 }
