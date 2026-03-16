@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MouvementStockController;
 use App\Http\Controllers\Api\AlerteController;
+use App\Http\Controllers\Api\AssistantController;
 
 use function Symfony\Component\String\u;
 
@@ -18,6 +19,7 @@ use App\Http\Controllers\Api\FournisseurController;
 Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
 Route::post('/mouvements', [MouvementStockController::class, 'store']);
 Route::get('alertes', [AlerteController::class, 'index']);
+Route::post('/assistant', [AssistantController::class, 'ask']);
 
 
 // --- ROUTES PROTÉGÉES ---
