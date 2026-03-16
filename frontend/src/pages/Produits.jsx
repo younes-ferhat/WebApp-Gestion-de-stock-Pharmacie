@@ -1,28 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, AlertCircle, X } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, PackagePlus, Loader2, CheckCircle2 } from 'lucide-react'; 
 import AddProductModal from '../components/AddProductModal';
+import AddLotModal from '../components/AddLotModal';
 
 export default function Produits() {
   const [produits, setProduits] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLotModalOpen, setIsLotModalOpen] = useState(false);
 
-  // --- RÉCUPÉRATION DE L'UTILISATEUR CONNECTÉ ---
+  // On récupère l'utilisateur pour vérifier son rôle
   const user = JSON.parse(localStorage.getItem('user'));
+  const token = localStorage.getItem('token');
 
-  // --- ÉTAT POUR LA MODALE DE SUPPRESSION ---
-  const [deleteConfig, setDeleteConfig] = useState({ 
-    isOpen: false, 
-    productId: null, 
-    productName: '' 
-  });
-
-  // --- RÉCUPÉRATION DES PRODUITS AVEC AUTH ---
   const fetchProduits = () => {
     setLoading(true);
-    const token = localStorage.getItem('token');
-
     fetch('http://localhost:8000/api/produits', {
       method: 'GET',
       headers: {
@@ -30,202 +22,138 @@ export default function Produits() {
         'Authorization': `Bearer ${token}`
       }
     })
-      .then((res) => {
-        if (res.status === 401) throw new Error('Session expirée. Veuillez vous reconnecter.');
-        if (!res.ok) throw new Error('Erreur réseau lors du chargement');
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((data) => {
-        setProduits(data);
+        const results = Array.isArray(data) ? data : (data.data || []);
+        setProduits(results);
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        console.error(err);
         setLoading(false);
       });
   };
 
-  useEffect(() => {
-    fetchProduits();
-  }, []);
+  // --- NOUVELLE FONCTION DE SUPPRESSION ---
+  const handleDelete = async (id, nom) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le produit "${nom}" ?`)) {
+      try {
+        const res = await fetch(`http://localhost:8000/api/produits/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-  // --- LOGIQUE DE SUPPRESSION AVEC AUTH ---
-  const openDeleteModal = (id, nom) => {
-    setDeleteConfig({ isOpen: true, productId: id, productName: nom });
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteConfig({ isOpen: false, productId: null, productName: '' });
-  };
-
-  const handleConfirmDelete = async () => {
-    const token = localStorage.getItem('token');
-
-    try {
-      const response = await fetch(`http://localhost:8000/api/produits/${deleteConfig.productId}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
+        if (res.ok) {
+          fetchProduits(); // On rafraîchit la liste
+        } else {
+          alert("Erreur lors de la suppression. Le produit est peut-être lié à des lots.");
         }
-      });
-
-      if (response.ok) {
-        setProduits(produits.filter(p => p.id !== deleteConfig.productId));
-        closeDeleteModal();
-      } else if (response.status === 403) {
-        alert("Accès refusé : Seul un administrateur peut supprimer un produit.");
-      } else {
-        alert("Erreur lors de la suppression.");
+      } catch (err) {
+        alert("Erreur de connexion au serveur.");
       }
-    } catch (err) {
-      console.error("Erreur réseau :", err);
     }
   };
 
-  const getStockBadge = (stock, seuil) => {
-    if (stock === 0) return <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold uppercase">Rupture</span>;
-    if (stock <= seuil) return <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase">Stock Faible</span>;
-    return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase">En Stock</span>;
-  };
-
-  if (loading && produits.length === 0) return <div className="p-10 text-center font-medium text-gray-500">Connexion à l'inventaire...</div>;
-  if (error) return (
-    <div className="p-10 text-center">
-        <div className="text-red-500 mb-4 font-bold">Erreur : {error}</div>
-        <button onClick={fetchProduits} className="text-[#76b09c] underline">Réessayer</button>
-    </div>
-  );
+  useEffect(() => { fetchProduits(); }, []);
 
   return (
-    <div className="space-y-6 animate-fade-in relative p-4 md:p-8">
-      {/* Header */}
+    <div className="space-y-6 p-4 md:p-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Gestion des Produits</h1>
-          <p className="text-gray-500">Connecté en tant que : <span className="font-semibold text-[#76b09c]">{user?.name} ({user?.role})</span></p>
+          <h1 className="text-3xl font-black text-gray-800 tracking-tight">Gestion des Produits</h1>
+          <p className="text-gray-500 font-medium">Inventaire et flux de stock en temps réel.</p>
         </div>
 
-        {/* CONDITION : Seul l'ADMIN peut voir le bouton "Nouveau Produit" */}
-        {user?.role === 'ADMIN' && (
+        <div className="flex gap-3">
           <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-[#76b09c] hover:bg-[#5e8d7d] text-white px-5 py-3 rounded-xl font-semibold transition-all shadow-lg active:scale-95"
+            onClick={() => setIsLotModalOpen(true)}
+            className="flex items-center gap-2 bg-white border-2 border-[#76b09c] text-[#76b09c] px-5 py-3 rounded-2xl font-bold hover:bg-emerald-50 transition-all active:scale-95 shadow-sm"
           >
-            <Plus size={20} />
-            <span>Nouveau Produit</span>
+            <PackagePlus size={20} />
+            <span>Recevoir un Lot</span>
           </button>
-        )}
-      </div>
 
-      {/* Recherche & Filtres */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Rechercher dans la base..." 
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#76b09c]/50"
-          />
+          {user?.role === 'ADMIN' && (
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-[#76b09c] text-white px-5 py-3 rounded-2xl font-bold hover:bg-[#5e8d7d] shadow-lg shadow-[#76b09c]/20 active:scale-95 transition-all"
+            >
+              <Plus size={20} />
+              <span>Nouveau Produit</span>
+            </button>
+          )}
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
-          <Filter size={18} />
-          <span>Filtres</span>
-        </button>
       </div>
 
-      {/* Tableau */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="p-4 font-semibold text-gray-600">Produit</th>
-                <th className="p-4 font-semibold text-gray-600">Catégorie</th>
-                <th className="p-4 font-semibold text-gray-600">Prix Unit.</th>
-                <th className="p-4 font-semibold text-gray-600">Stock</th>
-                <th className="p-4 font-semibold text-gray-600">Statut</th>
-                <th className="p-4 font-semibold text-gray-600 text-center">Actions</th>
+      {/* TABLEAU DES PRODUITS */}
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50/50 text-gray-400 text-xs uppercase tracking-widest">
+            <tr>
+              <th className="p-6 font-black">Produit</th>
+              <th className="p-6 font-black text-center">Stock Total</th>
+              <th className="p-6 font-black">Statut</th>
+              {user?.role === 'ADMIN' && <th className="p-6 font-black text-right">Actions</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {loading ? (
+              <tr>
+                <td colSpan="4" className="p-20 text-center">
+                  <Loader2 size={40} className="animate-spin mx-auto text-[#76b09c] opacity-20" />
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {produits.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="p-4">
-                    <div className="font-bold text-gray-800">{p.nom}</div>
-                    <div className="text-xs text-gray-400 font-mono">{p.code_barre || `ID: #${p.id}`}</div>
-                  </td>
-                  <td className="p-4 text-gray-600 text-sm">{p.categorie?.nom || 'Non classé'}</td>
-                  <td className="p-4 font-medium">{p.prix ? parseFloat(p.prix).toFixed(2) : '0.00'} €</td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-bold ${p.quantite_totale <= p.seuil_alerte ? 'text-amber-600' : 'text-gray-700'}`}>
-                        {p.quantite_totale}
-                      </span>
-                      {p.quantite_totale <= p.seuil_alerte && <AlertCircle size={14} className="text-amber-500" />}
+            ) : produits.map((p) => (
+              <tr key={p.id} className="hover:bg-gray-50/50 transition-all group">
+                <td className="p-6">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-800 text-lg">{p.nom}</span>
+                    <span className="text-xs text-gray-400 font-bold uppercase tracking-tighter">
+                       {p.categorie?.nom || 'Sans catégorie'}
+                    </span>
+                  </div>
+                </td>
+                <td className="p-6 text-center">
+                  <span className={`text-xl font-black ${p.quantite_totale <= p.seuil_alerte ? 'text-rose-500' : 'text-gray-800'}`}>
+                    {p.quantite_totale}
+                  </span>
+                </td>
+                <td className="p-6">
+                  {p.quantite_totale <= p.seuil_alerte ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-tighter animate-pulse">
+                      <AlertCircle size={12} /> Stock Critique
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-tighter">
+                      <CheckCircle2 size={12} /> En Stock
+                    </span>
+                  )}
+                </td>
+                
+                {/* ACTIONS RÉSERVÉES À L'ADMIN */}
+                {user?.role === 'ADMIN' && (
+                  <td className="p-6 text-right">
+                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="p-2 text-gray-400 hover:text-[#76b09c] hover:bg-emerald-50 rounded-xl transition-all">
+                        <Edit size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(p.id, p.nom)}
+                        className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </td>
-                  <td className="p-4">{getStockBadge(p.quantite_totale, p.seuil_alerte)}</td>
-                  <td className="p-4 text-center">
-                    <div className="flex justify-center gap-2">
-                      {/* Si c'est un employé, on peut masquer ou désactiver l'édition également */}
-                      <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={18} /></button>
-                      
-                      {/* CONDITION : Seul l'ADMIN peut voir le bouton supprimer */}
-                      {user?.role === 'ADMIN' && (
-                        <button 
-                          onClick={() => openDeleteModal(p.id, p.nom)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* --- MODALE DE SUPPRESSION DESIGN --- */}
-      {deleteConfig.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6 text-center">
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-                <AlertCircle className="h-8 w-8 text-red-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900">Supprimer le produit ?</h3>
-              <p className="text-sm text-gray-500 mt-2">
-                Êtes-vous sûr de vouloir supprimer <span className="font-semibold text-gray-800">{deleteConfig.productName}</span> ? Cette action est irréversible.
-              </p>
-            </div>
-            <div className="bg-gray-50 px-6 py-4 flex flex-col gap-2">
-              <button
-                onClick={handleConfirmDelete}
-                className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
-              >
-                Confirmer la suppression
-              </button>
-              <button
-                onClick={closeDeleteModal}
-                className="w-full bg-white text-gray-600 border border-gray-200 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* La modale d'ajout ne s'ouvre que si isModalOpen est true */}
-      <AddProductModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onRefresh={fetchProduits} 
-      />
+      <AddProductModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onRefresh={fetchProduits} />
+      <AddLotModal isOpen={isLotModalOpen} onClose={() => setIsLotModalOpen(false)} onRefresh={fetchProduits} />
     </div>
   );
 }
