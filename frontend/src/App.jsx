@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-// ON IMPORTE TOUT ICI (Note bien l'ajout de Navigate)
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 
 import Login from './components/Login';
@@ -7,15 +6,26 @@ import Dashboard from './pages/Dashboard';
 import Produits from './pages/Produits';
 import AIChat from './pages/AIChat';
 import Utilisateurs from './pages/Utilisateurs'; 
+import Fournisseurs from './pages/Fournisseurs';
+import Historique from './pages/Historique'; // <--- Import de la nouvelle page
 import authService from './services/authService';
-import { LayoutDashboard, Package, MessageSquare, LogOut, Users } from 'lucide-react';
+
+// Ajout de History et Building2 dans les icônes
+import { 
+  LayoutDashboard, 
+  Package, 
+  MessageSquare, 
+  LogOut, 
+  Users, 
+  Building2, 
+  History 
+} from 'lucide-react';
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Vérifier la session au démarrage
     const storedUser = authService.getUser();
     if (storedUser) {
       setUser(storedUser);
@@ -32,12 +42,10 @@ function App() {
     return <div className="p-10 text-center font-medium">Chargement du système...</div>;
   }
 
-  // Si l'utilisateur n'est pas connecté, on affiche uniquement le Login
   if (!user) {
     return <Login onLoginSuccess={setUser} />;
   }
 
-  // Style des liens de navigation
   const navLinkClass = ({ isActive }) =>
     `flex items-center space-x-3 p-3 rounded-lg transition-all ${
       isActive
@@ -58,7 +66,6 @@ function App() {
             <h2 className="text-2xl font-extrabold tracking-tight">Pharmasol</h2>
           </div>
 
-          {/* Profil Utilisateur */}
           <div className="mb-8 p-4 bg-black/10 rounded-2xl border border-white/10">
             <p className="text-xs uppercase tracking-widest opacity-60 mb-1">Session active</p>
             <p className="font-bold truncate">{user?.name}</p>
@@ -67,7 +74,6 @@ function App() {
             </p>
           </div>
 
-          {/* Liens de Navigation */}
           <div className="flex flex-col space-y-2">
             <NavLink to="/" className={navLinkClass}>
               <LayoutDashboard size={20} />
@@ -77,6 +83,17 @@ function App() {
             <NavLink to="/produits" className={navLinkClass}>
               <Package size={20} />
               <span>Gestion Produits</span>
+            </NavLink>
+
+            <NavLink to="/fournisseurs" className={navLinkClass}>
+              <Building2 size={20} />
+              <span>Fournisseurs</span>
+            </NavLink>
+
+            {/* LIEN HISTORIQUE (Traçabilité) */}
+            <NavLink to="/historique" className={navLinkClass}>
+              <History size={20} />
+              <span>Historique</span>
             </NavLink>
 
             {/* SEUL L'ADMIN VOIT CE BOUTON */}
@@ -93,7 +110,6 @@ function App() {
             </NavLink>
           </div>
 
-          {/* Bouton Déconnexion */}
           <button
             onClick={handleLogout}
             className="mt-auto flex items-center space-x-3 p-3 rounded-lg hover:bg-red-500/20 transition-all text-white border-t border-white/10 pt-6"
@@ -109,9 +125,13 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/produits" element={<Produits />} />
+              <Route path="/fournisseurs" element={<Fournisseurs />} />
+              
+              {/* Route pour l'Historique */}
+              <Route path="/historique" element={<Historique />} />
+              
               <Route path="/ai-chat" element={<AIChat />} />
               
-              {/* ROUTE PROTÉGÉE : Navigate est maintenant bien défini */}
               <Route 
                 path="/personnel" 
                 element={
@@ -119,7 +139,6 @@ function App() {
                 } 
               />
 
-              {/* Redirection par défaut si la route n'existe pas */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
