@@ -16,31 +16,35 @@ class AssistantController extends Controller
             // 1. Validation de la question
             $request->validate(['question' => 'required|string']);
             $question = $request->input('question');
+            $questionLower = strtolower($question);
 
-            // 2. LOGIQUE ST3 : Identification de l'intention et extraction SQL
+            // 2. LOGIQUE D'EXTRACTION : On adapte les données au sujet de la question
             $contexte = "";
 
-            if (str_contains(strtolower($question), 'périme') || str_contains(strtolower($question), 'expiration')) {
-                $donnees = Lot::with('produit')->where('date_peremption', '<', now()->addMonths(3))->get();
-                $contexte = "Données des lots proches expiration : " . $donnees->toJson();
+            if (str_contains($questionLower, 'périme') || str_contains($questionLower, 'expiration') || str_contains($questionLower, 'lot')) {
+                // Si on parle de lots ou de péremption, on va chercher TOUS les lots (pas seulement les périmés)
+                // pour que l'IA puisse répondre à "Combien de lots existe"
+                $donnees = Lot::with('produit')->get();
+                $contexte = "Données des lots en stock (incluant dates expiration et produits liés) : " . $donnees->toJson();
             } else {
+                // Sinon, on donne l'état général des produits
                 $donnees = Produit::all(['nom', 'quantite_totale', 'seuil_alerte']);
-                $contexte = "État actuel des stocks : " . $donnees->toJson();
+                $contexte = "État actuel des stocks par produit : " . $donnees->toJson();
             }
 
-            // 3. Règles de comportement ultra-strictes (Tes règles !)
+            // 3. Règles de comportement (Ajustées pour être moins agressives)
             $systemRules = "Tu es l'assistant de gestion expert de la pharmacie Pharmasol. 
-            REGLES DE CONTEXTE :
-            1. Tu ne dois répondre QU'À des questions liées à la pharmacie, aux médicaments, aux stocks ou aux fournisseurs.
-            2. Si une question sort du contexte pharmaceutique (ex: cuisine, sport, météo), réponds : 'Désolé, en tant qu'assistant Pharmasol, je suis programmé uniquement pour vous aider dans la gestion de votre pharmacie.'
-            3. Utilise UNIQUEMENT les données JSON fournies pour tes calculs.
-            4. Ne donne jamais de conseils médicaux graves.
+            TON RÔLE :
+            1. Répondre aux questions sur les médicaments, les stocks, les LOTS, les dates de péremption et les fournisseurs.
+            2. La gestion des LOTS est une partie centrale de ton travail. Si on te demande 'combien de lots existe', analyse les données JSON fournies pour compter.
+            3. Si et SEULEMENT SI la question est totalement étrangère à la gestion (ex: 'quel temps fait-il ?'), réponds : 'Désolé, en tant qu'assistant Pharmasol, je suis programmé uniquement pour vous aider dans la gestion de votre pharmacie.'
+            4. Utilise UNIQUEMENT les données JSON fournies pour donner des chiffres exacts.
             5. Sois concis, professionnel et réponds en français.";
 
-            // 4. UN SEUL APPEL à Ollama avec les instructions ET le contexte
+            // 4. APPEL à Ollama
             $response = Http::timeout(120)->post('http://localhost:11434/api/generate', [
                 'model' => 'gemma3:4b', 
-                'prompt' => "INSTRUCTIONS : $systemRules \n\n DONNÉES : $contexte \n\n QUESTION : $question \n\n RÉPONSE :",
+                'prompt' => "INSTRUCTIONS : $systemRules \n\n DONNÉES DISPONIBLES : $contexte \n\n QUESTION DE L'UTILISATEUR : $question \n\n RÉPONSE :",
                 'stream' => false,
             ]);
 
