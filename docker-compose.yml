@@ -29,5 +29,6 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend:/app
+      - /app/node_modules  # <--- AJOUTÉ : Empêche Windows d'écraser les modules Linux
     environment:
       - VITE_API_URL=http://localhost:8000/api

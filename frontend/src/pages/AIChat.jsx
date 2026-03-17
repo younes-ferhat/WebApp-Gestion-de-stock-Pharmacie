@@ -77,7 +77,7 @@ function AIChat() {
         </div>
         <div>
           <h1 className="text-3xl font-black text-gray-800 tracking-tight">Assistant IA Pharmasol</h1>
-          <p className="text-gray-500 text-sm font-medium italic">Modèle local : Gemma 3 (4b)</p>
+          <p className="text-gray-500 text-sm font-medium italic">Modèle local : qwen2.5 (1.5B)</p>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ function AIChat() {
             <div className="flex justify-start">
               <div className="bg-white px-6 py-4 rounded-full border border-gray-100 flex items-center gap-3 shadow-sm">
                 <Loader2 size={18} className="animate-spin text-[#76b09c]" />
-                <span className="text-xs font-black text-gray-400 uppercase tracking-widest text-left">Gemma analyse vos stocks...</span>
+                <span className="text-xs font-black text-gray-400 uppercase tracking-widest text-left">qwen2.5 analyse vos stocks...</span>
               </div>
             </div>
           )}
