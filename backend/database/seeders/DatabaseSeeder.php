@@ -8,7 +8,6 @@ use App\Models\Produit;
 use App\Models\Lot;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\Fournisseur;
 
 class DatabaseSeeder extends Seeder
 {
@@ -96,16 +95,6 @@ class DatabaseSeeder extends Seeder
                 'produit_id' => $amoxicilline->id, // Liaison automatique
             ]
         );
-        // Juste avant la création des produits
-            $sanofi = Fournisseur::updateOrCreate(
-    ['email' => 'contact@sanofi.fr'],
-    ['nom' => 'Sanofi Aventis', 'telephone' => '0144777777']
-);
-
-        $biogaran = Fournisseur::updateOrCreate(
-    ['email' => 'info@biogaran.fr'],
-    ['nom' => 'Biogaran Laboratoires', 'telephone' => '0155667788']
-);
 
         $this->command->info('Base de données initialisée dynamiquement avec succès !');
     }
