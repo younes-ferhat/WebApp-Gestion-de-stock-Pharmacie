@@ -1,0 +1,33 @@
+services:
+  # Base de données
+  db:
+    image: mysql:8.0
+    container_name: pharmasol-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: pharmasol_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+
+  # Laravel Backend
+  backend:
+    build: ./backend
+    container_name: pharmasol-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www
+    depends_on:
+      - db
+
+  # React Frontend
+  frontend:
+    build: ./frontend
+    container_name: pharmasol-ui
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    environment:
+      - VITE_API_URL=http://localhost:8000/api

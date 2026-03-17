@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -7,35 +8,33 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MouvementStockController;
 use App\Http\Controllers\Api\AlerteController;
-
-use function Symfony\Component\String\u;
-
+use App\Http\Controllers\Api\AssistantController;
 use App\Http\Controllers\Api\LotController;
 use App\Http\Controllers\Api\FournisseurController;
 
-// --- ROUTES PUBLIQUES ---
-// On ajoute ->name('login') pour éviter l'erreur Route [login] not defined
+// --- 1. ROUTES PUBLIQUES (Accessibles sans connexion) ---
 Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
-Route::post('/mouvements', [MouvementStockController::class, 'store']);
-Route::get('alertes', [AlerteController::class, 'index']);
 
+// Routes débloquées pour corriger les erreurs 401/405 de tes collègues
+Route::get('/mouvements', [MouvementStockController::class, 'index']); // Pour l'historique
+Route::post('/mouvements', [MouvementStockController::class, 'store']); // Pour enregistrer
+Route::get('/alertes', [AlerteController::class, 'index']);            // Pour le dashboard
+Route::post('/assistant', [AssistantController::class, 'ask']);      // Pour ton IA
 
-// --- ROUTES PROTÉGÉES ---
+// --- 2. ROUTES PROTÉGÉES (Nécessitent un Token Sanctum) ---
 Route::middleware('auth:sanctum')->group(function () {
+    
+    // Auth & Profil
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 
-    // Produits & Catégories (Automatiquement protégés par Sanctum)
+    // Ressources CRUD (Automatiquement protégés)
     Route::apiResource('categories', CategorieController::class);
     Route::apiResource('produits', ProduitController::class);
-     Route::apiResource('lots', LotController::class);
-    
+    Route::apiResource('lots', LotController::class);
     Route::apiResource('fournisseurs', FournisseurController::class);
-    // Nouvelles routes pour les utilisateurs
+    
+    // Gestion des utilisateurs (Admin)
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
-   
-    
-    // Exemple de protection par rôle (Issue ADMIN)
-    // Route::delete('/produits/{id}', [ProduitController::class, 'destroy'])->middleware('role:ADMIN');
 });

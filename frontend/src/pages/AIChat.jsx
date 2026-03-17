@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Sparkles, Loader2, MessageSquare, Info } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, Info } from 'lucide-react';
 
 function AIChat() {
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: "Bonjour ! Je suis l'intelligence artificielle de Pharmasol. Je peux analyser vos stocks, vos péremptions et vous aider à optimiser vos commandes. Que souhaitez-vous savoir ?" }
+    { 
+      role: 'assistant', 
+      text: "Bonjour ! Je suis l'IA de Pharmasol. Je suis connectée en direct à vos stocks et vos lots. Que voulez-vous vérifier aujourd'hui ?" 
+    }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -28,25 +31,37 @@ function AIChat() {
 
     try {
       const token = localStorage.getItem('token');
-      // On envoie la requête à la route que ton collègue va créer
-      const res = await fetch('http://localhost:8000/api/ai-chat', {
+      
+      // Connexion à TON API Backend
+      const res = await fetch('http://localhost:8000/api/assistant', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ message: input })
+        // Envoi du champ "question" attendu par ton contrôleur PHP
+        body: JSON.stringify({ question: input }) 
       });
 
       const data = await res.json();
       
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        text: data.reply || "Je n'ai pas pu traiter votre demande pour le moment." 
-      }]);
+      if (res.ok) {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          // Récupération du champ "reponse" de ton contrôleur
+          text: data.reponse || "Analyse terminée, mais aucune réponse générée." 
+        }]);
+      } else {
+        throw new Error(data.message || data.error || "Erreur serveur");
+      }
+
     } catch (err) {
       console.error("Erreur IA:", err);
-      setMessages(prev => [...prev, { role: 'assistant', text: "Erreur de connexion avec l'assistant IA." }]);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        text: "⚠️ Erreur : Impossible de joindre l'IA. Vérifiez qu'Ollama est lancé et que la base de données est connectée." 
+      }]);
     } finally {
       setIsTyping(false);
     }
@@ -55,14 +70,14 @@ function AIChat() {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] animate-fade-in">
       
-      {/* Header local */}
+      {/* Header avec ton identité projet */}
       <div className="flex items-center gap-4 mb-6">
         <div className="p-3 bg-[#76b09c] text-white rounded-2xl shadow-lg shadow-[#76b09c]/20">
           <Bot size={28} />
         </div>
         <div>
-          <h1 className="text-3xl font-black text-gray-800 tracking-tight">Assistant IA</h1>
-          <p className="text-gray-500 text-sm font-medium italic">Analyse prédictive de l'officine</p>
+          <h1 className="text-3xl font-black text-gray-800 tracking-tight">Assistant IA Pharmasol</h1>
+          <p className="text-gray-500 text-sm font-medium italic">Modèle local : Gemma 3 (4b)</p>
         </div>
       </div>
 
@@ -70,7 +85,7 @@ function AIChat() {
       <div className="flex-1 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col overflow-hidden">
         
         {/* Zone des messages */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-gray-50/30">
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-gray-50/30 text-left">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`flex gap-4 max-w-[75%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -89,11 +104,12 @@ function AIChat() {
               </div>
             </div>
           ))}
+          
           {isTyping && (
             <div className="flex justify-start">
               <div className="bg-white px-6 py-4 rounded-full border border-gray-100 flex items-center gap-3 shadow-sm">
                 <Loader2 size={18} className="animate-spin text-[#76b09c]" />
-                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Analyse en cours...</span>
+                <span className="text-xs font-black text-gray-400 uppercase tracking-widest text-left">Gemma analyse vos stocks...</span>
               </div>
             </div>
           )}
@@ -107,7 +123,7 @@ function AIChat() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Demandez une analyse de vos stocks..."
+              placeholder="Ex: Quels lots expirent bientôt ?"
               className="w-full bg-gray-50 border border-gray-100 p-5 pr-16 rounded-[1.5rem] outline-none focus:ring-2 focus:ring-[#76b09c] transition-all font-medium text-gray-700"
             />
             <button 
@@ -119,7 +135,7 @@ function AIChat() {
             </button>
           </div>
           <p className="text-[10px] text-center text-gray-400 mt-3 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-            <Info size={12}/> L'IA peut faire des erreurs, vérifiez les stocks manuellement.
+            <Info size={12}/> Confidentialité garantie : Les données ne quittent jamais votre serveur local.
           </p>
         </form>
       </div>
